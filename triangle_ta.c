@@ -225,10 +225,6 @@ void transfer_isp_tsp_background_parameter(uint32_t isp_tsp_parameter_start)
 
   params[1].texture_control_word = 0;
 
-  /*
-    An ~equilateral triangle, roughly centered inside the area of the 32x32 tile
-    at tile coordinate (0, 0), screen space coordinates, clockwise:
-   */
   // top left
   params[1].a.x =  0.0f;
   params[1].a.y =  0.0f;
@@ -236,14 +232,14 @@ void transfer_isp_tsp_background_parameter(uint32_t isp_tsp_parameter_start)
   params[1].a.color = 0xff00ff; // magenta
 
   // top right
-  params[1].b.x = 31.0f;
+  params[1].b.x = 32.0f;
   params[1].b.y =  0.0f;
   params[1].b.z =  0.00001f;
   params[1].b.color = 0xff00ff; // magenta
 
   // bottom right
-  params[1].c.x = 31.0f;
-  params[1].c.y = 31.0f;
+  params[1].c.x = 32.0f;
+  params[1].c.y = 32.0f;
   params[1].c.z =  0.00001f;
   params[1].c.color = 0xff00ff; // magenta
 
