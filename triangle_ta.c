@@ -256,6 +256,37 @@ void transfer_isp_tsp_background_parameter(uint32_t isp_tsp_parameter_start)
 #define ISP_BACKGND_T__TAG_OFFSET(n) (((n) & 0x7) << 0)
 
 /******************************************************************************
+ SH4 store queue
+ ******************************************************************************/
+
+/*
+  The TA polygon converter FIFO requires 32-byte bus access. Attempts to access
+  the TA with smaller bus accesses will result in incorrect TA operation. The
+  Dreamcast has three mechanisms that can generate 32-byte writes:
+
+  - SH4 store queue (commonly used)
+
+  - Holly CH2-DMA (commonly used)
+
+  - meticulous and clever use of SH4 cache writeback (esoteric forbidden technique)
+
+  Of these, the mechanism that requires the least code is the SH4 store queue,
+  so this demo will also use the SH4 store queue for that reason.
+
+  The SH4 store queue is described in sh7091pm_e.pdf printed page 61-64 and
+  79-81.
+*/
+
+// sh7091pm_e.pdf:
+//  > Issuing a PREF instruction for P4 area H'E000 0000 to H'E3FF FFFC starts a
+//  > burst transfer from the SQs to external memory.
+#define pref(address) \
+  { asm volatile ("pref @%0" : : "r" (address) : "memory"); }
+
+volatile uint32_t * SH7091__CCN__QACR0 = (volatile uint32_t *)(0xff000000 + 0x38);
+volatile uint32_t * SH7091__CCN__QACR1 = (volatile uint32_t *)(0xff000000 + 0x3c);
+
+/******************************************************************************
  TA Parameters
  ******************************************************************************/
 
@@ -330,17 +361,6 @@ typedef struct ta_vertex_parameter__polygon_type_0 {
 } ta_vertex_parameter__polygon_type_0;
 static_assert((sizeof (struct ta_vertex_parameter__polygon_type_0)) == 32);
 
-/*
-  sh7091pm_e.pdf:
-  > Issuing a PREF instruction for P4 area H'E000 0000 to H'E3FF FFFC starts a burst transfer from
-  > the SQs to external memory.
- */
-#define pref(address) \
-  { asm volatile ("pref @%0" : : "r" (address) : "memory"); }
-
-volatile uint32_t * SH7091__CCN__QACR0 = (volatile uint32_t *)(0xff000000 + 0x38);
-volatile uint32_t * SH7091__CCN__QACR1 = (volatile uint32_t *)(0xff000000 + 0x3c);
-
 #define PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__END_OF_LIST (0 << 29)
 #define PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__POLYGON_OR_MODIFIER_VOLUME (4 << 29)
 #define PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER (7 << 29)
@@ -348,6 +368,7 @@ volatile uint32_t * SH7091__CCN__QACR1 = (volatile uint32_t *)(0xff000000 + 0x3c
 #define PARAMETER_CONTROL_WORD__PARA_CONTROL__LIST_TYPE__OPAQUE (0 << 24)
 #define PARAMETER_CONTROL_WORD__OBJ_CONTROL__COL_TYPE__PACKED_COLOR (0 << 4)
 #define PARAMETER_CONTROL_WORD__OBJ_CONTROL__GOURAUD (1 << 1)
+
 void transfer_ta_triangle()
 {
   // set the store queue destination address to the TA Polygon Converter FIFO
@@ -458,28 +479,6 @@ void transfer_ta_triangle()
 
   store_queue_ix += (sizeof (ta_global_parameter__end_of_list));
 }
-
-/******************************************************************************
- SH4 store queue
- ******************************************************************************/
-
-/*
-  The TA polygon converter FIFO requires 32-byte bus access. Attempts to access
-  the TA with smaller bus accesses will result in incorrect TA operation. The
-  Dreamcast has three mechanisms that can generate 32-byte writes:
-
-  - SH4 store queue (commonly used)
-
-  - Holly CH2-DMA (commonly used)
-
-  - meticulous and clever use of SH4 cache writeback (esoteric forbidden technique)
-
-  Of these, the mechanism that requires the least code is the SH4 store queue,
-  so this demo will also use the SH4 store queue for that reason.
-
-  The SH4 store queue is described in sh7091pm_e.pdf printed page 61-64 and
-  79-81.
-*/
 
 /******************************************************************************
  Holly register definitions
