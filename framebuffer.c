@@ -1,7 +1,23 @@
 #include <stdint.h>
 
+volatile uint32_t * SCFSR2 = (volatile uint32_t *)0xffe80010;
+volatile uint32_t * SCFTDR2 = (volatile uint32_t *)0xffe8000c;
+
+static inline void character(const char c)
+{
+  // wait for transmit fifo to become partially empty
+  //while ((*SCFSR2 & (0x1 << 5)) == 0);
+
+  //*SCFSR2 &= ~(0x1 << 5);
+
+  *SCFTDR2 = c;
+}
+
 void main()
 {
+  character('m');
+  character('\n');
+
   volatile uint32_t * texture_memory32 = (volatile uint32_t *)(0x05000000 | 0xA0000000);
 
   int blue = 0x0000ff;

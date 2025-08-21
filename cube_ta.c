@@ -136,6 +136,7 @@ typedef struct isp_tsp_parameter__polygon {
   DCDBSysArc990907E.pdf page 222-225
  */
 #define ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__ALWAYS (7 << 29)
+#define ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__GREATER (4 << 29)
 
 #define ISP_TSP_INSTRUCTION_WORD__CULLING_MODE__NO_CULLING (0 << 27)
 
@@ -161,32 +162,32 @@ void transfer_isp_tsp_background_parameter(uint32_t isp_tsp_parameter_start)
 
   volatile isp_tsp_parameter__polygon * params = (volatile isp_tsp_parameter__polygon *)(texture_memory32 + isp_tsp_parameter_start);
 
-  params[1].isp_tsp_instruction_word = ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__ALWAYS
+  params[0].isp_tsp_instruction_word = ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__ALWAYS
                                      | ISP_TSP_INSTRUCTION_WORD__CULLING_MODE__NO_CULLING;
 
-  params[1].tsp_instruction_word = TSP_INSTRUCTION_WORD__SRC_ALPHA_INSTR__ONE
+  params[0].tsp_instruction_word = TSP_INSTRUCTION_WORD__SRC_ALPHA_INSTR__ONE
                                  | TSP_INSTRUCTION_WORD__DST_ALPHA_INSTR__ZERO
                                  | TSP_INSTRUCTION_WORD__FOG_CONTROL__NO_FOG;
 
-  params[1].texture_control_word = 0;
+  params[0].texture_control_word = 0;
 
   // top left
-  params[1].a.x =  0.0f;
-  params[1].a.y =  0.0f;
-  params[1].a.z =  0.00001f;
-  params[1].a.color = 0xff00ff; // magenta
+  params[0].a.x =  0.0f;
+  params[0].a.y =  0.0f;
+  params[0].a.z =  0.00001f;
+  params[0].a.color = 0xff00ff; // magenta
 
   // top right
-  params[1].b.x = 32.0f;
-  params[1].b.y =  0.0f;
-  params[1].b.z =  0.00001f;
-  params[1].b.color = 0xff00ff; // magenta
+  params[0].b.x = 32.0f;
+  params[0].b.y =  0.0f;
+  params[0].b.z =  0.00001f;
+  params[0].b.color = 0xff00ff; // magenta
 
   // bottom right
-  params[1].c.x = 32.0f;
-  params[1].c.y = 32.0f;
-  params[1].c.z =  0.00001f;
-  params[1].c.color = 0xff00ff; // magenta
+  params[0].c.x = 32.0f;
+  params[0].c.y = 32.0f;
+  params[0].c.z =  0.00001f;
+  params[0].c.color = 0xff00ff; // magenta
 
   // bottom left (implied)
 }
@@ -310,14 +311,89 @@ static_assert((sizeof (struct ta_vertex_parameter__polygon_type_0)) == 32);
 #define PARAMETER_CONTROL_WORD__OBJ_CONTROL__COL_TYPE__PACKED_COLOR (0 << 4)
 #define PARAMETER_CONTROL_WORD__OBJ_CONTROL__GOURAUD (1 << 1)
 
-void transfer_ta_triangle()
+static inline uint32_t transfer_ta_global_end_of_list(uint32_t store_queue_ix)
 {
-  // set the store queue destination address to the TA Polygon Converter FIFO
-  *SH7091__CCN__QACR0 = ((ta_polygon_converter_fifo >> 24) & 0b11100);
-  *SH7091__CCN__QACR1 = ((ta_polygon_converter_fifo >> 24) & 0b11100);
+  //
+  // TA "end of list" global transfer
+  //
 
-  uint32_t store_queue_ix = store_queue;
+  volatile ta_global_parameter__end_of_list * end_of_list = (volatile ta_global_parameter__end_of_list *)store_queue_ix;
 
+  end_of_list->parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__END_OF_LIST;
+  end_of_list->_zero0 = 0;
+  end_of_list->_zero1 = 0;
+  end_of_list->_zero2 = 0;
+  end_of_list->_zero3 = 0;
+  end_of_list->_zero4 = 0;
+  end_of_list->_zero5 = 0;
+  end_of_list->_zero6 = 0;
+
+  // start store queue transfer of `end_of_list` to the TA
+  pref(store_queue_ix);
+
+  store_queue_ix += (sizeof (ta_global_parameter__end_of_list));
+
+  return store_queue_ix;
+}
+
+static inline uint32_t transfer_ta_vertex_triangle(uint32_t store_queue_ix,
+                                                   float ax, float ay, float az, uint32_t ac,
+                                                   float bx, float by, float bz, uint32_t bc,
+                                                   float cx, float cy, float cz, uint32_t cc)
+{
+  //
+  // TA polygon vertex transfer
+  //
+
+  volatile ta_vertex_parameter__polygon_type_0 * vertex = (volatile ta_vertex_parameter__polygon_type_0 *)store_queue_ix;
+
+  // bottom left
+  vertex[0].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER;
+  vertex[0].x = ax;
+  vertex[0].y = ay;
+  vertex[0].z = az;
+  vertex[0]._zero0 = 0;
+  vertex[0]._zero1 = 0;
+  vertex[0].base_color = ac;
+  vertex[0]._zero2 = 0;
+
+  // start store queue transfer of `vertex[0]` to the TA
+  pref(store_queue_ix + 32 * 0);
+
+  // top center
+  vertex[1].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER;
+  vertex[1].x = bx;
+  vertex[1].y = by;
+  vertex[1].z = bz;
+  vertex[1]._zero0 = 0;
+  vertex[1]._zero1 = 0;
+  vertex[1].base_color = bc;
+  vertex[1]._zero2 = 0;
+
+  // start store queue transfer of `vertex[1]` to the TA
+  pref(store_queue_ix + 32 * 1);
+
+  // bottom right
+  vertex[2].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER
+                                   | PARAMETER_CONTROL_WORD__PARA_CONTROL__END_OF_STRIP;
+  vertex[2].x = cx;
+  vertex[2].y = cy;
+  vertex[2].z = cz;
+  vertex[2]._zero0 = 0;
+  vertex[2]._zero1 = 0;
+  vertex[2].base_color = cc;
+  vertex[2]._zero2 = 0;
+
+  // start store queue transfer of `params[2]` to the TA
+  pref(store_queue_ix + 32 * 2);
+
+  store_queue_ix += (sizeof (ta_vertex_parameter__polygon_type_0)) * 3;
+
+  return store_queue_ix;
+}
+
+static inline uint32_t transfer_ta_global_polygon(uint32_t store_queue_ix)
+{
   //
   // TA polygon global transfer
   //
@@ -329,7 +405,7 @@ void transfer_ta_triangle()
                                   | PARAMETER_CONTROL_WORD__OBJ_CONTROL__COL_TYPE__PACKED_COLOR
                                   | PARAMETER_CONTROL_WORD__OBJ_CONTROL__GOURAUD;
 
-  polygon->isp_tsp_instruction_word = ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__ALWAYS
+  polygon->isp_tsp_instruction_word = ISP_TSP_INSTRUCTION_WORD__DEPTH_COMPARE_MODE__GREATER
                                     | ISP_TSP_INSTRUCTION_WORD__CULLING_MODE__NO_CULLING;
   // Note that it is not possible to use
   // ISP_TSP_INSTRUCTION_WORD__GOURAUD_SHADING in this isp_tsp_instruction_word,
@@ -352,85 +428,178 @@ void transfer_ta_triangle()
 
   store_queue_ix += (sizeof (ta_global_parameter__polygon_type_0));
 
+  return store_queue_ix;
+}
+
+/*
+  These vertex and face definitions are a trivial transformation of the default
+  Blender cube, as exported by the .obj exporter (with triangulation enabled).
+ */
+typedef struct vec3 {
+  float x;
+  float y;
+  float z;
+} vec3;
+
+static const vec3 cube_vertex_position[] = {
+  {  1.0f,  1.0f, -1.0f },
+  {  1.0f, -1.0f, -1.0f },
+  {  1.0f,  1.0f,  1.0f },
+  {  1.0f, -1.0f,  1.0f },
+  { -1.0f,  1.0f, -1.0f },
+  { -1.0f, -1.0f, -1.0f },
+  { -1.0f,  1.0f,  1.0f },
+  { -1.0f, -1.0f,  1.0f },
+};
+
+static const uint32_t cube_vertex_color[] = {
+  0xff0000, // red
+  0x00ff00, // green
+  0x0000ff, // blue
+  0xffff00, // yellow
+  0x00ffff, // cyan
+  0xff00ff, // magenta
+  0xff7f00, // orange
+  0x7f00ff, // violet
+};
+
+typedef struct face {
+  int a;
+  int b;
+  int c;
+} face;
+
+/*
+  It is also possible to submit each cube face as a 4-vertex triangle strip, or
+  submit the entire cube as a single triangle strip.
+
+  Separate 3-vertex triangles are chosen to make this example more
+  straightforward, but this is not the best approach if high performance is
+  desired.
+ */
+
+static const face cube_faces[] = {
+  {4, 2, 0},
+  {2, 7, 3},
+  {6, 5, 7},
+  {1, 7, 5},
+  {0, 3, 1},
+  {4, 1, 5},
+  {4, 6, 2},
+  {2, 6, 7},
+  {6, 4, 5},
+  {1, 3, 7},
+  {0, 2, 3},
+  {4, 0, 1},
+};
+static const int cube_faces_length = (sizeof (cube_faces)) / (sizeof (cube_faces[0]));
+
+#define cos(n) __builtin_cosf(n)
+#define sin(n) __builtin_sinf(n)
+
+float theta = 0.7853981633974483f; // pi / 4
+
+static inline vec3 vertex_rotate(vec3 v)
+{
+  // to make the cube's appearance more interesting, rotate the vertex on two
+  // axes
+
+  float x0 = v.x;
+  float y0 = v.y;
+  float z0 = v.z;
+
+  float x1 = x0 * cos(theta) - z0 * sin(theta);
+  float y1 = y0;
+  float z1 = x0 * sin(theta) + z0 * cos(theta);
+
+  float x2 = x1;
+  float y2 = y1 * cos(theta) - z1 * sin(theta);
+  float z2 = y1 * sin(theta) + z1 * cos(theta);
+
+  return (vec3){x2, y2, z2};
+}
+
+static inline vec3 vertex_perspective_divide(vec3 v)
+{
+  float w = 1.0f / (v.z + 3.0f);
+  return (vec3){v.x * w, v.y * w, w};
+}
+
+static inline vec3 vertex_screen_space(vec3 v)
+{
+  return (vec3){
+    v.x * 16.f + 16.f,
+    v.y * 16.f + 16.f,
+    v.z,
+  };
+}
+
+void transfer_ta_cube()
+{
+  // set the store queue destination address to the TA Polygon Converter FIFO
+  *SH7091__CCN__QACR0 = ((ta_polygon_converter_fifo >> 24) & 0b11100);
+  *SH7091__CCN__QACR1 = ((ta_polygon_converter_fifo >> 24) & 0b11100);
+
+  uint32_t store_queue_ix = store_queue;
+
+  // See sh7091pm_e.pdf, printed page 79:
   //
-  // TA polygon vertex transfer
+  // > While the contents of one SQ are being transferred to external memory,
+  // > the other SQ can be written to without a penalty cycle, but writing to
+  // > the SQ involved in the transfer to external memory is deferred until the
+  // > transfer is completed.
   //
+  // The reason for incrementing store_queue_ix is that it is a cheap way to
+  // track which store queue is the most/least recently used--encoded in bit 5
+  // of the store queue address.
 
-  volatile ta_vertex_parameter__polygon_type_0 * vertex = (volatile ta_vertex_parameter__polygon_type_0 *)store_queue_ix;
+  store_queue_ix = transfer_ta_global_polygon(store_queue_ix);
 
-  // bottom left
-  vertex[0].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER;
-  vertex[0].x =  1.0f;
-  vertex[0].y = 29.0f;
-  vertex[0].z =  0.1f;
-  vertex[0]._zero0 = 0;
-  vertex[0]._zero1 = 0;
-  vertex[0].base_color = 0xff0000; // red
-  vertex[0]._zero2 = 0;
+  for (int face_ix = 0; face_ix < cube_faces_length; face_ix++) {
+    int ia = cube_faces[face_ix].a;
+    int ib = cube_faces[face_ix].b;
+    int ic = cube_faces[face_ix].c;
 
-  // start store queue transfer of `vertex[0]` to the TA
-  pref(store_queue_ix + 32 * 0);
+    vec3 va = vertex_screen_space(
+                vertex_perspective_divide(
+                  vertex_rotate(cube_vertex_position[ia])));
 
-  // top center
-  vertex[1].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER;
-  vertex[1].x = 16.0f;
-  vertex[1].y =  3.0f;
-  vertex[1].z =  0.1f;
-  vertex[1]._zero0 = 0;
-  vertex[1]._zero1 = 0;
-  vertex[1].base_color = 0x00ff00; // green
-  vertex[1]._zero2 = 0;
+    vec3 vb = vertex_screen_space(
+                vertex_perspective_divide(
+                  vertex_rotate(cube_vertex_position[ib])));
 
-  // start store queue transfer of `vertex[1]` to the TA
-  pref(store_queue_ix + 32 * 1);
+    vec3 vc = vertex_screen_space(
+                vertex_perspective_divide(
+                  vertex_rotate(cube_vertex_position[ic])));
 
-  // bottom right
-  vertex[2].parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__VERTEX_PARAMETER
-                                   | PARAMETER_CONTROL_WORD__PARA_CONTROL__END_OF_STRIP;
-  vertex[2].x = 31.0f;
-  vertex[2].y = 29.0f;
-  vertex[2].z =  0.1f;
-  vertex[2]._zero0 = 0;
-  vertex[2]._zero1 = 0;
-  vertex[2].base_color = 0x0000ff; // blue
-  vertex[2]._zero2 = 0;
+    uint32_t va_color = cube_vertex_color[ia];
+    uint32_t vb_color = cube_vertex_color[ib];
+    uint32_t vc_color = cube_vertex_color[ic];
 
-  // start store queue transfer of `params[2]` to the TA
-  pref(store_queue_ix + 32 * 2);
+    store_queue_ix = transfer_ta_vertex_triangle(store_queue_ix,
+                                                 va.x, va.y, va.z, va_color,
+                                                 vb.x, vb.y, vb.z, vb_color,
+                                                 vc.x, vc.y, vc.z, vc_color);
+  }
 
-  store_queue_ix += (sizeof (ta_vertex_parameter__polygon_type_0)) * 3;
-
-  //
-  // TA "end of list" global transfer
-  //
-
-  volatile ta_global_parameter__end_of_list * end_of_list = (volatile ta_global_parameter__end_of_list *)store_queue_ix;
-
-  end_of_list->parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__END_OF_LIST;
-  end_of_list->_zero0 = 0;
-  end_of_list->_zero1 = 0;
-  end_of_list->_zero2 = 0;
-  end_of_list->_zero3 = 0;
-  end_of_list->_zero4 = 0;
-  end_of_list->_zero5 = 0;
-  end_of_list->_zero6 = 0;
-
-  // start store queue transfer of `end_of_list` to the TA
-  pref(store_queue_ix);
-
-  store_queue_ix += (sizeof (ta_global_parameter__end_of_list));
+  store_queue_ix = transfer_ta_global_end_of_list(store_queue_ix);
 }
 
 /******************************************************************************
  Holly register definitions
  ******************************************************************************/
 
+volatile uint32_t * SOFTRESET     = (volatile uint32_t *)(0xa05f8000 + 0x08);
 volatile uint32_t * STARTRENDER   = (volatile uint32_t *)(0xa05f8000 + 0x14);
 volatile uint32_t * PARAM_BASE    = (volatile uint32_t *)(0xa05f8000 + 0x20);
 volatile uint32_t * REGION_BASE   = (volatile uint32_t *)(0xa05f8000 + 0x2c);
 volatile uint32_t * FB_R_SOF1     = (volatile uint32_t *)(0xa05f8000 + 0x50);
 volatile uint32_t * FB_W_SOF1     = (volatile uint32_t *)(0xa05f8000 + 0x60);
 volatile uint32_t * ISP_BACKGND_T = (volatile uint32_t *)(0xa05f8000 + 0x8c);
+
+volatile uint32_t * SPG_STATUS = (volatile uint32_t *)(0xa05f8000 + 0x10c);
+
+#define SPG_STATUS__VSYNC (1 << 13)
 
 volatile uint32_t * TA_OL_BASE        = (volatile uint32_t *)(0xa05f8000 + 0x124);
 volatile uint32_t * TA_ISP_BASE       = (volatile uint32_t *)(0xa05f8000 + 0x128);
@@ -460,14 +629,8 @@ void main()
   uint32_t object_list_start       = 0x100000;
   uint32_t opaque_list_pointer     = object_list_start;
 
-  // triangle_array_offset is relative to the beginning of isp_tsp_parameter_start
-  //
-  // transfer_isp_tsp_polygon_parameter writes to the beginning of
-  // isp_tsp_parameter start, so the value of triangle_array_offset is zero
-  uint32_t triangle_array_offset = (sizeof (isp_tsp_parameter__polygon)) * 0;
-  // background_offset is also relative to the beginning of
-  // isp_tsp_parameter_start
-  uint32_t background_offset     = (sizeof (isp_tsp_parameter__polygon)) * 1;
+  // background_offset is relative to the beginning of isp_tsp_parameter_start
+  uint32_t background_offset     = (sizeof (isp_tsp_parameter__polygon)) * 0;
 
   transfer_region_array(region_array_start, opaque_list_pointer);
 
@@ -502,7 +665,7 @@ void main()
   // While building object lists, the TA contains an internal index (exposed as
   // the read-only TA_ITP_CURRENT) for the next address that new ISP/TSP will be
   // stored at. The initial value of this index is TA_ISP_BASE.
-  *TA_ISP_BASE = isp_tsp_parameter_start;
+  *TA_ISP_BASE = isp_tsp_parameter_start + (sizeof (isp_tsp_parameter__polygon)) * 1;
   *TA_ISP_LIMIT = isp_tsp_parameter_start + 0x100000;
 
   // Similarly, the TA also contains, for up to 600 tiles, an internal index for
@@ -518,21 +681,6 @@ void main()
   // >   example, the address specified here must not be the same as the address
   // >   in the TA_ISP_BASE register.
   *TA_OL_LIMIT = object_list_start + 0x100000 - 32;
-
-  *TA_LIST_INIT = TA_LIST_INIT__LIST_INIT;
-
-  // dummy TA_LIST_INIT read; DCDBSysArc990907E.pdf in multiple places says this
-  // step is required.
-  (void)*TA_LIST_INIT;
-
-  //////////////////////////////////////////////////////////////////////////////
-  // transfer triangles to texture memory via the TA polygon converter FIFO
-  //////////////////////////////////////////////////////////////////////////////
-
-  transfer_ta_triangle();
-
-  // By the time this function returns, the TA has already written the
-  // object list and ISP/TSP parameters to texture memory.
 
   //////////////////////////////////////////////////////////////////////////////
   // configure CORE
@@ -556,13 +704,46 @@ void main()
   // will be written to when a tile is rendered/flushed.
   *FB_W_SOF1 = framebuffer_start;
 
-  // start the actual render--the rendering process begins by interpreting the
-  // region array
-  *STARTRENDER = 1;
-
   // without waiting for rendering to actually complete, immediately display the
   // framebuffer.
   *FB_R_SOF1 = framebuffer_start;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // animated drawing
+  //////////////////////////////////////////////////////////////////////////////
+
+  // draw 500 frames of cube rotation
+  for (int i = 0; i < 500; i++) {
+    //////////////////////////////////////////////////////////////////////////////
+    // transfer cube to texture memory via the TA polygon converter FIFO
+    //////////////////////////////////////////////////////////////////////////////
+
+    // TA_LIST_INIT needs to be written (every frame) prior to the first FIFO
+    // write.
+    *TA_LIST_INIT = TA_LIST_INIT__LIST_INIT;
+
+    // dummy TA_LIST_INIT read; DCDBSysArc990907E.pdf in multiple places says this
+    // step is required.
+    (void)*TA_LIST_INIT;
+
+    transfer_ta_cube();
+
+    //////////////////////////////////////////////////////////////////////////////
+    // start the actual rasterization
+    //////////////////////////////////////////////////////////////////////////////
+
+    // start the actual render--the rendering process begins by interpreting the
+    // region array
+    *STARTRENDER = 1;
+
+    // wait for vertical synchronization
+    while (!((*SPG_STATUS) & SPG_STATUS__VSYNC));
+    while (((*SPG_STATUS) & SPG_STATUS__VSYNC));
+
+    // increment theta for the cube rotation animation
+    // (used by the `vertex_rotate` function)
+    theta += 0.01f;
+  }
 
   // return from main; this will effectively jump back to the serial loader
 }
