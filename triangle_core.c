@@ -25,7 +25,7 @@
 
   E_DC_HW_outline.pdf "2.4 System memory mapping" (PDF page 10)
  */
-uint32_t texture_memory32 = 0xa5000000;
+const uint32_t texture_memory32 = 0xa5000000;
 
 /*
   You might want to at least read DCDBSysArc990907E.pdf page 168 before
@@ -297,6 +297,10 @@ void transfer_isp_tsp_background_parameter(uint32_t isp_tsp_parameter_start)
 #define ISP_BACKGND_T__SKIP(n) (((n) & 0x7) << 24)
 #define ISP_BACKGND_T__TAG_ADDRESS(n) (((n) & 0x1fffff) << 3)
 #define ISP_BACKGND_T__TAG_OFFSET(n) (((n) & 0x7) << 0)
+
+/******************************************************************************
+ Holly register definitions
+ ******************************************************************************/
 
 volatile uint32_t * STARTRENDER   = (volatile uint32_t *)(0xa05f8000 + 0x14);
 volatile uint32_t * PARAM_BASE    = (volatile uint32_t *)(0xa05f8000 + 0x20);
