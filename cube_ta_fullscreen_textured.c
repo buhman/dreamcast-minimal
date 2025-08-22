@@ -300,8 +300,8 @@ typedef struct ta_global_parameter__polygon_type_0 {
   uint32_t isp_tsp_instruction_word;
   uint32_t tsp_instruction_word;
   uint32_t texture_control_word;
-  uint32_t _zero0;
-  uint32_t _zero1;
+  uint32_t _res0;
+  uint32_t _res1;
   uint32_t data_size_for_sort_dma;
   uint32_t next_address_for_sort_dma;
 } ta_global_parameter__polygon_type_0;
@@ -309,13 +309,13 @@ static_assert((sizeof (struct ta_global_parameter__polygon_type_0)) == 32);
 
 typedef struct ta_global_parameter__end_of_list {
   uint32_t parameter_control_word;
-  uint32_t _zero0;
-  uint32_t _zero1;
-  uint32_t _zero2;
-  uint32_t _zero3;
-  uint32_t _zero4;
-  uint32_t _zero5;
-  uint32_t _zero6;
+  uint32_t _res0;
+  uint32_t _res1;
+  uint32_t _res2;
+  uint32_t _res3;
+  uint32_t _res4;
+  uint32_t _res5;
+  uint32_t _res6;
 } ta_global_parameter__end_of_list;
 static_assert((sizeof (struct ta_global_parameter__end_of_list)) == 32);
 
@@ -362,13 +362,6 @@ static inline uint32_t transfer_ta_global_end_of_list(uint32_t store_queue_ix)
   volatile ta_global_parameter__end_of_list * end_of_list = (volatile ta_global_parameter__end_of_list *)store_queue_ix;
 
   end_of_list->parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__END_OF_LIST;
-  end_of_list->_zero0 = 0;
-  end_of_list->_zero1 = 0;
-  end_of_list->_zero2 = 0;
-  end_of_list->_zero3 = 0;
-  end_of_list->_zero4 = 0;
-  end_of_list->_zero5 = 0;
-  end_of_list->_zero6 = 0;
 
   // start store queue transfer of `end_of_list` to the TA
   pref(store_queue_ix);
@@ -465,8 +458,6 @@ static inline uint32_t transfer_ta_global_polygon(uint32_t store_queue_ix, uint3
                                 | TEXTURE_CONTROL_WORD__SCAN_ORDER__NON_TWIDDLED
                                 | TEXTURE_CONTROL_WORD__TEXTURE_ADDRESS(texture_address / 8);
 
-  polygon->_zero0 = 0;
-  polygon->_zero1 = 0;
   polygon->data_size_for_sort_dma = 0;
   polygon->next_address_for_sort_dma = 0;
 

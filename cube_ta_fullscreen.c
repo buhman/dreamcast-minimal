@@ -297,8 +297,8 @@ typedef struct ta_global_parameter__polygon_type_0 {
   uint32_t isp_tsp_instruction_word;
   uint32_t tsp_instruction_word;
   uint32_t texture_control_word;
-  uint32_t _zero0;
-  uint32_t _zero1;
+  uint32_t _res0;
+  uint32_t _res1;
   uint32_t data_size_for_sort_dma;
   uint32_t next_address_for_sort_dma;
 } ta_global_parameter__polygon_type_0;
@@ -306,13 +306,13 @@ static_assert((sizeof (struct ta_global_parameter__polygon_type_0)) == 32);
 
 typedef struct ta_global_parameter__end_of_list {
   uint32_t parameter_control_word;
-  uint32_t _zero0;
-  uint32_t _zero1;
-  uint32_t _zero2;
-  uint32_t _zero3;
-  uint32_t _zero4;
-  uint32_t _zero5;
-  uint32_t _zero6;
+  uint32_t _res0;
+  uint32_t _res1;
+  uint32_t _res2;
+  uint32_t _res3;
+  uint32_t _res4;
+  uint32_t _res5;
+  uint32_t _res6;
 } ta_global_parameter__end_of_list;
 static_assert((sizeof (struct ta_global_parameter__end_of_list)) == 32);
 
@@ -330,10 +330,10 @@ typedef struct ta_vertex_parameter__polygon_type_0 {
   float x;
   float y;
   float z;
-  uint32_t _zero0;
-  uint32_t _zero1;
+  uint32_t _res0;
+  uint32_t _res1;
   uint32_t base_color;
-  uint32_t _zero2;
+  uint32_t _res2;
 } ta_vertex_parameter__polygon_type_0;
 static_assert((sizeof (struct ta_vertex_parameter__polygon_type_0)) == 32);
 
@@ -354,13 +354,6 @@ static inline uint32_t transfer_ta_global_end_of_list(uint32_t store_queue_ix)
   volatile ta_global_parameter__end_of_list * end_of_list = (volatile ta_global_parameter__end_of_list *)store_queue_ix;
 
   end_of_list->parameter_control_word = PARAMETER_CONTROL_WORD__PARA_CONTROL__PARA_TYPE__END_OF_LIST;
-  end_of_list->_zero0 = 0;
-  end_of_list->_zero1 = 0;
-  end_of_list->_zero2 = 0;
-  end_of_list->_zero3 = 0;
-  end_of_list->_zero4 = 0;
-  end_of_list->_zero5 = 0;
-  end_of_list->_zero6 = 0;
 
   // start store queue transfer of `end_of_list` to the TA
   pref(store_queue_ix);
@@ -386,10 +379,7 @@ static inline uint32_t transfer_ta_vertex_triangle(uint32_t store_queue_ix,
   vertex[0].x = ax;
   vertex[0].y = ay;
   vertex[0].z = az;
-  vertex[0]._zero0 = 0;
-  vertex[0]._zero1 = 0;
   vertex[0].base_color = ac;
-  vertex[0]._zero2 = 0;
 
   // start store queue transfer of `vertex[0]` to the TA
   pref(store_queue_ix + 32 * 0);
@@ -399,10 +389,7 @@ static inline uint32_t transfer_ta_vertex_triangle(uint32_t store_queue_ix,
   vertex[1].x = bx;
   vertex[1].y = by;
   vertex[1].z = bz;
-  vertex[1]._zero0 = 0;
-  vertex[1]._zero1 = 0;
   vertex[1].base_color = bc;
-  vertex[1]._zero2 = 0;
 
   // start store queue transfer of `vertex[1]` to the TA
   pref(store_queue_ix + 32 * 1);
@@ -413,10 +400,7 @@ static inline uint32_t transfer_ta_vertex_triangle(uint32_t store_queue_ix,
   vertex[2].x = cx;
   vertex[2].y = cy;
   vertex[2].z = cz;
-  vertex[2]._zero0 = 0;
-  vertex[2]._zero1 = 0;
   vertex[2].base_color = cc;
-  vertex[2]._zero2 = 0;
 
   // start store queue transfer of `params[2]` to the TA
   pref(store_queue_ix + 32 * 2);
@@ -452,8 +436,6 @@ static inline uint32_t transfer_ta_global_polygon(uint32_t store_queue_ix)
 
   polygon->texture_control_word = 0;
 
-  polygon->_zero0 = 0;
-  polygon->_zero1 = 0;
   polygon->data_size_for_sort_dma = 0;
   polygon->next_address_for_sort_dma = 0;
 
