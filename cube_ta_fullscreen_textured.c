@@ -185,6 +185,8 @@ typedef struct isp_tsp_parameter__polygon {
 #define TSP_INSTRUCTION_WORD__SRC_ALPHA_INSTR__ONE (1 << 29)
 #define TSP_INSTRUCTION_WORD__DST_ALPHA_INSTR__ZERO (0 << 26)
 #define TSP_INSTRUCTION_WORD__FOG_CONTROL__NO_FOG (0b10 << 22)
+#define TSP_INSTRUCTION_WORD__FILTER_MODE__POINT_SAMPLED (0b00 << 13)
+#define TSP_INSTRUCTION_WORD__TEXTURE_SHADING_INSTRUCTION__DECAL (0 << 6)
 #define TSP_INSTRUCTION_WORD__TEXTURE_U_SIZE__256 (5 << 3)
 #define TSP_INSTRUCTION_WORD__TEXTURE_V_SIZE__256 (5 << 0)
 
@@ -451,6 +453,8 @@ static inline uint32_t transfer_ta_global_polygon(uint32_t store_queue_ix, uint3
   polygon->tsp_instruction_word = TSP_INSTRUCTION_WORD__SRC_ALPHA_INSTR__ONE
                                 | TSP_INSTRUCTION_WORD__DST_ALPHA_INSTR__ZERO
                                 | TSP_INSTRUCTION_WORD__FOG_CONTROL__NO_FOG
+                                | TSP_INSTRUCTION_WORD__FILTER_MODE__POINT_SAMPLED
+                                | TSP_INSTRUCTION_WORD__TEXTURE_SHADING_INSTRUCTION__DECAL
                                 | TSP_INSTRUCTION_WORD__TEXTURE_U_SIZE__256
                                 | TSP_INSTRUCTION_WORD__TEXTURE_V_SIZE__256;
 
