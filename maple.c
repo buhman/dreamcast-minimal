@@ -66,8 +66,8 @@ void print_base16(uint32_t n, int len)
   interactions with the Maple controller.
 
   The "Maple DMA" unit is really more of a "FIFO", similar to the TA, except the
-  Maple controller that happens to have a hard dependency on SH4 DMA (unlike the
-  TA which the a more relaxed restriction "must use 32-byte transfers").
+  Maple controller has a hard dependency on SH4 DMA (unlike the TA which also
+  allows non-DMA transfers).
 
   The structure of the transmit buffer given to the Maple DMA unit is always:
 
