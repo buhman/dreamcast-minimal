@@ -1,8 +1,18 @@
 #include <stdint.h>
 
-volatile uint8_t * SCFTDR2 = (volatile uint8_t *)0xffe8000c;
-volatile uint16_t * SCFSR2 = (volatile uint16_t *)0xffe80010;
-volatile uint16_t * SCFCR2 = (volatile uint16_t *)0xffe80018;
+/*
+  This example does not configure the SCIF, and presumes it is already
+  configured for UART transmission.
+
+  This is *not* the default SCIF state as initialized by the Dreamcast boot
+  rom. However, the serial loader does not attempt to un-initialize the SCIF
+  prior to jumping to system memory.
+ */
+
+// SH4 on-chip peripheral module control
+volatile uint8_t * SCFTDR2 = (volatile uint8_t *)(0xffe80000 + 0x0c);
+volatile uint16_t * SCFSR2 = (volatile uint16_t *)(0xffe80000 + 0x10);
+volatile uint16_t * SCFCR2 = (volatile uint16_t *)(0xffe80000 + 0x18);
 
 #define SCFSR2__TDFE (1 << 5)
 #define SCFSR2__TEND (1 << 6)
